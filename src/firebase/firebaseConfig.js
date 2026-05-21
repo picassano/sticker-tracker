@@ -7,12 +7,13 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY_HERE",
-  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "PASTE_YOUR_APP_ID_HERE"
+  apiKey: "AIzaSyA5Zkpp50a0VdP9T_39wzYkYyz3JKfkHHE",
+  authDomain: "sticker-tracker-fa845.firebaseapp.com",
+  projectId: "sticker-tracker-fa845",
+  storageBucket: "sticker-tracker-fa845.firebasestorage.app",
+  messagingSenderId: "942156597763",
+  appId: "1:942156597763:web:5108ff774211fc8f8c9c36",
+  measurementId: "G-GNTPQNBFTV"
 };
 
 // Kiểm tra xem config đã được điền chưa
