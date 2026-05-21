@@ -18,7 +18,6 @@ export const isFirebaseConfigured = !firebaseConfig.apiKey.includes('PASTE');
 let app = null;
 let db = null;
 let auth = null;
-const provider = new GoogleAuthProvider();
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
@@ -26,4 +25,4 @@ if (isFirebaseConfigured) {
   auth = getAuth(app);
 }
 
-export { db, auth, provider };
+export { db, auth };

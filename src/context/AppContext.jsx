@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useFirestore } from '../hooks/useFirestore';
+import { auth } from '../firebase/firebaseConfig';
+import { signInAnonymously } from 'firebase/auth';
 
 const AppContext = createContext();
 
@@ -39,6 +41,13 @@ export const AppProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('stickerTrackerSettings', JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem('stickerTrackerHistory', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('stickerTrackerRequests', JSON.stringify(requests)); }, [requests]);
+
+  // ── Firebase Anonymous Auth ──
+  useEffect(() => {
+    if (auth) {
+      signInAnonymously(auth).catch(err => console.warn("Lỗi đăng nhập ẩn danh:", err));
+    }
+  }, []);
 
   // ── Cross-tab sync ──
   useEffect(() => {
