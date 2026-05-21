@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useFirestore } from '../hooks/useFirestore';
 
 const AppContext = createContext();
 
@@ -17,7 +18,8 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : {
       stickersPerUSD: 10,
       vndPerUSD: 25000,
-      parentPin: ''
+      parentPin: '',
+      familyId: '',
     };
   });
 
@@ -31,12 +33,14 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // ── LocalStorage sync (always on as fallback) ──
   useEffect(() => { localStorage.setItem('stickerTrackerRole', role); }, [role]);
   useEffect(() => { localStorage.setItem('stickerTrackerKids', JSON.stringify(kids)); }, [kids]);
   useEffect(() => { localStorage.setItem('stickerTrackerSettings', JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem('stickerTrackerHistory', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('stickerTrackerRequests', JSON.stringify(requests)); }, [requests]);
 
+  // ── Cross-tab sync ──
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'stickerTrackerKids') setKids(JSON.parse(e.newValue || '[]'));
@@ -48,60 +52,103 @@ export const AppProvider = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // ── Firebase Cloud Sync ──
+  const { syncToCloud, isCloudEnabled } = useFirestore(
+    settings.familyId,
+    { kids, history, requests, settings },
+    { setKids, setHistory, setRequests, setSettings }
+  );
+
+  // Wrapper: sau mỗi thay đổi state → sync lên cloud
+  const syncKids = useCallback((newKids) => {
+    setKids(newKids);
+    syncToCloud('kids', newKids);
+  }, [syncToCloud]);
+
+  const syncHistory = useCallback((newHistory) => {
+    setHistory(newHistory);
+    syncToCloud('history', newHistory);
+  }, [syncToCloud]);
+
+  const syncRequests = useCallback((newRequests) => {
+    setRequests(newRequests);
+    syncToCloud('requests', newRequests);
+  }, [syncToCloud]);
+
+  // ── CRUD operations ──
   const addKid = (kid) => {
     const newKid = { ...kid, id: Date.now().toString(), stickers: 0, usd: 0 };
-    setKids(prev => [...prev, newKid]);
+    syncKids(k => {
+      const updated = [...k, newKid];
+      syncToCloud('kids', updated);
+      return updated;
+    });
   };
 
-  const removeKid = (id) => setKids(prev => prev.filter(k => k.id !== id));
+  const removeKid = (id) => {
+    setKids(prev => {
+      const updated = prev.filter(k => k.id !== id);
+      syncToCloud('kids', updated);
+      return updated;
+    });
+  };
 
   const updateKid = (id, newData) => {
-    setKids(prev => prev.map(kid => kid.id === id ? { ...kid, ...newData } : kid));
+    setKids(prev => {
+      const updated = prev.map(kid => kid.id === id ? { ...kid, ...newData } : kid);
+      syncToCloud('kids', updated);
+      return updated;
+    });
   };
 
   const updateBalance = (id, amount, currency = 'stickers', reason = "Cập nhật") => {
     let success = true;
-    setKids(prev => prev.map(kid => {
-      if (kid.id === id) {
-        const currentBal = kid[currency] || 0;
-        if (currentBal + amount < 0) {
-          success = false;
-          return kid;
+    let updatedKids = null;
+
+    setKids(prev => {
+      const newKids = prev.map(kid => {
+        if (kid.id === id) {
+          const currentBal = kid[currency] || 0;
+          if (currentBal + amount < 0) { success = false; return kid; }
+          return { ...kid, [currency]: currentBal + amount };
         }
-        return { ...kid, [currency]: currentBal + amount };
+        return kid;
+      });
+      if (success) {
+        updatedKids = newKids;
+        syncToCloud('kids', newKids);
       }
-      return kid;
-    }));
-    
+      return newKids;
+    });
+
     if (success) {
-      setHistory(prev => [{
+      const newEntry = {
         id: Date.now().toString() + Math.random(),
-        kidId: id,
-        amount, 
-        currency,
-        reason,
+        kidId: id, amount, currency, reason,
         timestamp: new Date().toISOString()
-      }, ...prev].slice(0, 100));
+      };
+      setHistory(prev => {
+        const updated = [newEntry, ...prev].slice(0, 200);
+        syncToCloud('history', updated);
+        return updated;
+      });
     }
     return success;
   };
 
-  // Keep this for backwards compatibility with UI that updates stickers directly
   const updateStickers = (id, amount, reason) => updateBalance(id, amount, 'stickers', reason);
 
   const transferBalance = (fromId, toId, amount, currency, reason = "Tặng điểm") => {
     if (amount <= 0 || fromId === toId) return false;
-    
     let canTransfer = false;
     setKids(prev => {
       const fromKid = prev.find(k => k.id === fromId);
       if (fromKid && (fromKid[currency] || 0) >= amount) canTransfer = true;
-      return prev; 
+      return prev;
     });
-
     if (canTransfer) {
-      updateBalance(fromId, -amount, currency, `Chuyển điểm: ${reason}`);
-      updateBalance(toId, amount, currency, `Nhận điểm: ${reason}`);
+      updateBalance(fromId, -amount, currency, `Chuyển: ${reason}`);
+      updateBalance(toId, amount, currency, `Nhận: ${reason}`);
       return true;
     }
     return false;
@@ -110,15 +157,11 @@ export const AppProvider = ({ children }) => {
   const exchangeStickersToUSD = (kidId, usdAmount) => {
     let success = false;
     const requiredStickers = usdAmount * (settings.stickersPerUSD || 10);
-    
     setKids(prev => {
       const kid = prev.find(k => k.id === kidId);
-      if (kid && kid.stickers >= requiredStickers) {
-        success = true;
-      }
+      if (kid && kid.stickers >= requiredStickers) success = true;
       return prev;
     });
-
     if (success) {
       updateBalance(kidId, -requiredStickers, 'stickers', `Quy đổi ra ${usdAmount} USD`);
       updateBalance(kidId, usdAmount, 'usd', `Quy đổi từ ${requiredStickers} Sao`);
@@ -129,38 +172,46 @@ export const AppProvider = ({ children }) => {
 
   const addRequest = (kidId, action) => {
     const newReq = {
-      id: Date.now().toString(), kidId, action, status: 'pending', timestamp: new Date().toISOString()
+      id: Date.now().toString(), kidId, action,
+      status: 'pending', timestamp: new Date().toISOString()
     };
-    setRequests(prev => [newReq, ...prev]);
+    setRequests(prev => {
+      const updated = [newReq, ...prev];
+      syncToCloud('requests', updated);
+      return updated;
+    });
   };
 
   const processRequest = (reqId, isApproved) => {
-    setRequests(prev => prev.map(req => {
-      if (req.id === reqId) {
-        if (isApproved && req.status === 'pending') {
-          const pointChange = req.action.type === 'EARN' ? req.action.points : -req.action.points;
-          updateStickers(req.kidId, pointChange, `Duyệt: ${req.action.name}`);
+    setRequests(prev => {
+      const updated = prev.map(req => {
+        if (req.id === reqId) {
+          if (isApproved && req.status === 'pending') {
+            const pointChange = req.action.type === 'EARN' ? req.action.points : -req.action.points;
+            updateStickers(req.kidId, pointChange, `Duyệt: ${req.action.name}`);
+          }
+          return { ...req, status: isApproved ? 'approved' : 'rejected' };
         }
-        return { ...req, status: isApproved ? 'approved' : 'rejected' };
-      }
-      return req;
-    }));
+        return req;
+      });
+      syncToCloud('requests', updated);
+      return updated;
+    });
   };
 
-  const getVndFromUsd = (usdAmount) => {
-    return (usdAmount || 0) * (settings.vndPerUSD || 25000);
-  };
-
+  const getVndFromUsd = (usdAmount) => (usdAmount || 0) * (settings.vndPerUSD || 25000);
   const formatUSD = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
   const formatVND = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 
   return (
-    <AppContext.Provider value={{ 
+    <AppContext.Provider value={{
       role, setRole,
       kids, addKid, removeKid, updateKid, updateStickers, updateBalance, transferBalance, exchangeStickersToUSD,
-      settings, setSettings, getVndFromUsd, formatUSD, formatVND,
+      settings, setSettings,
+      getVndFromUsd, formatUSD, formatVND,
       history,
-      requests, addRequest, processRequest
+      requests, addRequest, processRequest,
+      isCloudEnabled,
     }}>
       {children}
     </AppContext.Provider>

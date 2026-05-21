@@ -1,24 +1,30 @@
 import React, { useState } from 'react';
-import { X, Settings } from 'lucide-react';
+import { X, Settings, Cloud, CloudOff } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function SettingsModal({ onClose }) {
-  const { settings, setSettings, kids } = useAppContext();
+  const { settings, setSettings, kids, isCloudEnabled } = useAppContext();
   
   const [stickersPerUSD, setStickersPerUSD] = useState(settings.stickersPerUSD || 10);
   const [vndPerUSD, setVndPerUSD] = useState(settings.vndPerUSD || 25000);
   const [parentPin, setParentPin] = useState(settings.parentPin || '');
   const [deviceOwnerId, setDeviceOwnerId] = useState(settings.deviceOwnerId || '');
+  const [familyId, setFamilyId] = useState(settings.familyId || '');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (familyId && familyId.trim().length < 3) {
+      setError('Mã gia đình phải có ít nhất 3 ký tự!');
+      return;
+    }
     setSettings(prev => ({ 
       ...prev, 
       stickersPerUSD: Number(stickersPerUSD), 
       vndPerUSD: Number(vndPerUSD),
       parentPin,
-      deviceOwnerId
+      deviceOwnerId,
+      familyId: familyId.trim().toLowerCase(),
     }));
     onClose();
   };
@@ -80,6 +86,30 @@ export default function SettingsModal({ onClose }) {
               <option value="">-- Dùng chung (Hiện tất cả) --</option>
               {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
             </select>
+          </div>
+
+          {/* CLOUD SYNC - FAMILY ID */}
+          <div style={{ background: isCloudEnabled ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.4)', padding: '16px', borderRadius: '16px', border: `2px solid ${isCloudEnabled ? 'rgba(99,102,241,0.3)' : 'var(--surface-border)'}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              {isCloudEnabled 
+                ? <Cloud size={18} color="var(--primary)" /> 
+                : <CloudOff size={18} color="var(--text-muted)" />}
+              <label style={{ fontWeight: 800, color: isCloudEnabled ? 'var(--primary)' : 'var(--text-main)' }}>
+                {isCloudEnabled ? '☁️ Đang đồng bộ Cloud' : '🔌 Mã Gia Đình (Cloud Sync)'}
+              </label>
+            </div>
+            <input 
+              type="text"
+              value={familyId}
+              onChange={(e) => setFamilyId(e.target.value)}
+              placeholder="VD: nha-cong-huong-2024"
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${isCloudEnabled ? 'var(--primary)' : 'var(--surface-border)'}`, background: 'white', fontSize: '1rem', outline: 'none', fontWeight: 600 }}
+            />
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+              {isCloudEnabled 
+                ? '✅ Tất cả thiết bị cùng mã này sẽ đồng bộ dữ liệu thời gian thực.'
+                : 'Nhập cùng một mã trên tất cả thiết bị để đồng bộ dữ liệu. Để trống nếu chỉ dùng 1 thiết bị.'}
+            </p>
           </div>
 
           {error && <p style={{ color: 'var(--danger-text)', fontWeight: 700, margin: 0 }}>{error}</p>}
