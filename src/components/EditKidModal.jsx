@@ -6,10 +6,15 @@ export default function EditKidModal({ kid, onClose }) {
   const { updateKid } = useAppContext();
   const [name, setName] = useState(kid.name);
   const [avatarUrl, setAvatarUrl] = useState(kid.avatarUrl || '');
-  const [isShared, setIsShared] = useState(kid.isShared !== false);
+  const [isShared, setIsShared] = useState(kid.isShared !== undefined ? kid.isShared : true);
   const [goalName, setGoalName] = useState(kid.goalName || '');
   const [goalUsd, setGoalUsd] = useState(kid.goalUsd || '');
   const [error, setError] = useState('');
+
+  const presetAvatars = [
+    'Kem', 'Bap', 'Kitty', 'Puppy', 'Bear', 'Tiger', 'Lion', 
+    'Panda', 'Fox', 'Rabbit', 'Monkey', 'Penguin', 'Frog', 'Unicorn', 'Dragon'
+  ].map(seed => `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${seed}`);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -58,10 +63,24 @@ export default function EditKidModal({ kid, onClose }) {
           </div>
           
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text-muted)' }}>URL Ảnh Đại Diện (Tuỳ chọn)</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text-muted)' }}>Avatar nhanh (Hoạt hình)</label>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '10px' }}>
+              {presetAvatars.map(url => (
+                <img 
+                  key={url} src={url} alt="avatar" 
+                  onClick={() => setAvatarUrl(url)}
+                  style={{ 
+                    width: '50px', height: '50px', borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
+                    border: avatarUrl === url ? '3px solid var(--primary)' : '2px solid transparent',
+                    background: 'rgba(255,255,255,0.8)', boxShadow: avatarUrl === url ? '0 4px 12px rgba(99,102,241,0.4)' : 'none'
+                  }} 
+                />
+              ))}
+            </div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text-muted)' }}>Hoặc nhập link ảnh của bạn</label>
             <input 
               type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
+              placeholder="https://..."
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid var(--surface-border)', background: 'white', fontSize: '1.1rem', outline: 'none' }}
             />
           </div>

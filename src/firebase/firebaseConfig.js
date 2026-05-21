@@ -1,10 +1,6 @@
-// src/firebase/firebaseConfig.js
-// ==================================================
-// HƯỚNG DẪN: Thay các giá trị "..." bằng config thật
-// từ Firebase Console > Project Settings > Web App
-// ==================================================
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyA5Zkpp50a0VdP9T_39wzYkYyz3JKfkHHE",
@@ -21,10 +17,13 @@ export const isFirebaseConfigured = !firebaseConfig.apiKey.includes('PASTE');
 
 let app = null;
 let db = null;
+let auth = null;
+const provider = new GoogleAuthProvider();
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+  auth = getAuth(app);
 }
 
-export { db };
+export { db, auth, provider };

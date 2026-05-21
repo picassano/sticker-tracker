@@ -7,6 +7,8 @@ import SettingsModal from './components/SettingsModal';
 import QRGenerator from './components/QRGenerator';
 import RequestsPanel from './components/RequestsPanel';
 import PinModal from './components/PinModal';
+import { usePWAInstall } from './hooks/usePWAInstall';
+import { Download } from 'lucide-react';
 import './index.css';
 
 function Dashboard() {
@@ -16,6 +18,7 @@ function Dashboard() {
   const [showQRGen, setShowQRGen] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
   const [showPinAuth, setShowPinAuth] = useState(false);
+  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
@@ -180,6 +183,17 @@ function Dashboard() {
           }} 
           onCancel={() => setShowPinAuth(false)} 
         />
+      )}
+
+      {/* PWA INSTALL PROMPT */}
+      {isInstallable && !isInstalled && (
+        <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: 'white', padding: '12px 20px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 10px 25px rgba(99,102,241,0.5)', zIndex: 100, width: 'max-content', maxWidth: '90%', animation: 'slideUp 0.5s ease-out' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Cài đặt Sticker Tracker vào máy!</span>
+          <button onClick={promptInstall} style={{ background: 'white', color: 'var(--primary)', padding: '6px 12px', borderRadius: '20px', fontWeight: 800, fontSize: '0.85rem' }}>
+            <Download size={14} style={{ display: 'inline', marginRight: '4px' }} />
+            Cài ngay
+          </button>
+        </div>
       )}
     </div>
   );

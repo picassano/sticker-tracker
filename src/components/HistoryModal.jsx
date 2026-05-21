@@ -1,9 +1,9 @@
 import React from 'react';
-import { X, Clock, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { X, Clock, ArrowUpCircle, ArrowDownCircle, Trash2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function HistoryModal({ kid, onClose }) {
-  const { history } = useAppContext();
+  const { history, role, clearHistory } = useAppContext();
   
   // Filter history for this kid, show latest 50 only (history is already newest-first)
   const kidHistory = history.filter(h => h.kidId === kid.id).slice(0, 50);
@@ -14,6 +14,12 @@ export default function HistoryModal({ kid, onClose }) {
     return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute:'2-digit' });
   };
 
+  const handleClear = () => {
+    if (window.confirm('Bạn có chắc muốn dọn dẹp lịch sử? Hệ thống sẽ chỉ giữ lại 5 giao dịch gần nhất.')) {
+      clearHistory(kid.id);
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '20px' }}>
       <div className="glass-panel animate-pop" style={{ width: '100%', maxWidth: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: '24px', position: 'relative' }}>
@@ -21,9 +27,19 @@ export default function HistoryModal({ kid, onClose }) {
           <X size={24} />
         </button>
         
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '20px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={24} /> Nhật Ký Của {kid.name}
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingRight: '24px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={24} /> {kid.name}
+          </h2>
+          {role === 'parent' && kidHistory.length > 5 && (
+            <button 
+              onClick={handleClear}
+              style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 700 }}
+            >
+              <Trash2 size={14} /> Dọn dẹp
+            </button>
+          )}
+        </div>
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {kidHistory.length === 0 ? (

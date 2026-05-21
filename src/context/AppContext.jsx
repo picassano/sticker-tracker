@@ -199,6 +199,17 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const clearHistory = (kidId) => {
+    setHistory(prev => {
+      // Keep only the newest 5 records for this kid, and all records for other kids
+      const otherKidsHistory = prev.filter(h => h.kidId !== kidId);
+      const kidHistory = prev.filter(h => h.kidId === kidId).slice(0, 5);
+      const updated = [...otherKidsHistory, ...kidHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      syncToCloud('history', updated);
+      return updated;
+    });
+  };
+
   const getVndFromUsd = (usdAmount) => (usdAmount || 0) * (settings.vndPerUSD || 25000);
   const formatUSD = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
   const formatVND = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
@@ -209,7 +220,7 @@ export const AppProvider = ({ children }) => {
       kids, addKid, removeKid, updateKid, updateStickers, updateBalance, transferBalance, exchangeStickersToUSD,
       settings, setSettings,
       getVndFromUsd, formatUSD, formatVND,
-      history,
+      history, clearHistory,
       requests, addRequest, processRequest,
       isCloudEnabled,
     }}>

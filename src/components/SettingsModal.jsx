@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { X, Settings, Cloud, CloudOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Settings, Cloud, CloudOff, LogIn, LogOut } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { auth, provider } from '../firebase/firebaseConfig';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 export default function SettingsModal({ onClose }) {
   const { settings, setSettings, kids, isCloudEnabled } = useAppContext();
@@ -11,6 +13,32 @@ export default function SettingsModal({ onClose }) {
   const [deviceOwnerId, setDeviceOwnerId] = useState(settings.deviceOwnerId || '');
   const [familyId, setFamilyId] = useState(settings.familyId || '');
   const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      setError('');
+    } catch (err) {
+      setError('Đăng nhập thất bại: ' + err.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      setError('Đăng xuất thất bại.');
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -88,27 +116,49 @@ export default function SettingsModal({ onClose }) {
             </select>
           </div>
 
-          {/* CLOUD SYNC - FAMILY ID */}
+          {/* CLOUD SYNC & AUTH */}
           <div style={{ background: isCloudEnabled ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.4)', padding: '16px', borderRadius: '16px', border: `2px solid ${isCloudEnabled ? 'rgba(99,102,241,0.3)' : 'var(--surface-border)'}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              {isCloudEnabled 
-                ? <Cloud size={18} color="var(--primary)" /> 
-                : <CloudOff size={18} color="var(--text-muted)" />}
-              <label style={{ fontWeight: 800, color: isCloudEnabled ? 'var(--primary)' : 'var(--text-main)' }}>
-                {isCloudEnabled ? '☁️ Đang đồng bộ Cloud' : '🔌 Mã Gia Đình (Cloud Sync)'}
-              </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isCloudEnabled 
+                  ? <Cloud size={18} color="var(--primary)" /> 
+                  : <CloudOff size={18} color="var(--text-muted)" />}
+                <label style={{ fontWeight: 800, color: isCloudEnabled ? 'var(--primary)' : 'var(--text-main)' }}>
+                  {isCloudEnabled ? '☁️ Cloud Sync (Đang bật)' : '🔌 Mã Gia Đình (Cloud Sync)'}
+                </label>
+              </div>
+              
+              {user ? (
+                <button type="button" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--danger-text)', background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                  <LogOut size={14} /> Đăng xuất
+                </button>
+              ) : (
+                <button type="button" onClick={handleLogin} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', background: 'var(--primary)', padding: '6px 12px', borderRadius: '12px', fontWeight: 700, boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}>
+                  <LogIn size={14} /> Đăng nhập Google
+                </button>
+              )}
             </div>
+
+            {user ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--success-text)', marginBottom: '12px', fontWeight: 600 }}>
+                ✅ Đã đăng nhập: {user.email}
+              </p>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--danger-text)', marginBottom: '12px', fontWeight: 600 }}>
+                ⚠️ Bạn cần đăng nhập Google để đồng bộ dữ liệu.
+              </p>
+            )}
+
             <input 
               type="text"
               value={familyId}
               onChange={(e) => setFamilyId(e.target.value)}
-              placeholder="VD: nha-cong-huong-2024"
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${isCloudEnabled ? 'var(--primary)' : 'var(--surface-border)'}`, background: 'white', fontSize: '1rem', outline: 'none', fontWeight: 600 }}
+              placeholder="Nhập mã gia đình..."
+              disabled={!user}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${isCloudEnabled ? 'var(--primary)' : 'var(--surface-border)'}`, background: !user ? 'var(--surface-border)' : 'white', fontSize: '1rem', outline: 'none', fontWeight: 600 }}
             />
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
-              {isCloudEnabled 
-                ? '✅ Tất cả thiết bị cùng mã này sẽ đồng bộ dữ liệu thời gian thực.'
-                : 'Nhập cùng một mã trên tất cả thiết bị để đồng bộ dữ liệu. Để trống nếu chỉ dùng 1 thiết bị.'}
+              Tất cả các máy nhập cùng Mã gia đình này sẽ tự động đồng bộ.
             </p>
           </div>
 
