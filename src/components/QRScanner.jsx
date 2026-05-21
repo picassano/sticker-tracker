@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -33,7 +34,7 @@ export default function QRScanner({ kid, onClose }) {
     }
   };
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
       {/* Header */}
       <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)', zIndex: 10 }}>
@@ -44,13 +45,18 @@ export default function QRScanner({ kid, onClose }) {
       </div>
 
       {/* Scanner Area */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         {!result ? (
-           <Scanner 
-             onScan={handleScan}
-             formats={['qr_code']}
-             styles={{ container: { width: '100%', height: '100%' } }}
-           />
+           <>
+             <Scanner 
+               onScan={handleScan}
+               formats={['qr_code']}
+               styles={{ container: { width: '100%', height: '100%' } }}
+             />
+             <p style={{ color: 'white', textAlign: 'center', marginTop: '20px', fontWeight: 600 }}>
+               Hướng camera vào mã QR
+             </p>
+           </>
         ) : (
           <div className="glass-panel animate-pop" style={{ padding: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.9)', maxWidth: '80%' }}>
             {result === 'success-earn' && (
@@ -90,6 +96,7 @@ export default function QRScanner({ kid, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

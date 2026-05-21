@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Image as ImageIcon } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
@@ -29,7 +30,7 @@ export default function EditKidModal({ kid, onClose }) {
     onClose();
   };
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '20px' }}>
       <div className="glass-panel animate-pop" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', color: 'var(--text-muted)' }}>
@@ -123,6 +124,7 @@ export default function EditKidModal({ kid, onClose }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

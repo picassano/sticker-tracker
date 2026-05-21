@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Landmark } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { playTadaSound, playErrorSound } from '../hooks/useSound';
@@ -42,7 +43,7 @@ export default function ExchangeModal({ kid, onClose }) {
     }
   };
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
       <div className="glass-panel animate-pop" style={{ width: '100%', maxWidth: '380px', padding: '24px', position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', color: 'var(--text-muted)' }}>
@@ -95,6 +96,7 @@ export default function ExchangeModal({ kid, onClose }) {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
